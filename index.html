@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PeptideTracker — User-Reported Peptide Experience Database</title>
+  <meta name="description" content="A transparent, community-driven repository of self-reported peptide experiences. Browse structured data. No medical claims." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/recharts/2.10.3/Recharts.min.js"></script>
+  <script src="https://unpkg.com/lucide-react@0.263.1/dist/umd/lucide-react.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #F8FAFC; color: #0F172A; -webkit-font-smoothing: antialiased; }
+    input, select, textarea, button { font-family: inherit; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel" data-type="module">
+    const { useState, useMemo, useCallback } = React;
+    const {
+      BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+      PieChart, Pie, Cell, AreaChart, Area
+    } = Recharts;
+    const {
+      Search, Star, AlertTriangle, Shield, BarChart3, Users, FileText, LogIn, LogOut,
+      Plus, ArrowLeft, Check, X, Activity, Brain, Dumbbell, Heart, Flame, Zap, Clock,
+      Flag, Trash2, Info, TrendingUp, ChevronRight, Database, Beaker, Hash, ArrowUpRight,
+      LayoutGrid, List
+    } = lucideReact;
+
+    // ─── DESIGN TOKENS ─────────────────────────────────────────────────
+    const T = {
+      primary: "#1E40AF", primaryLight: "#3B82F6", primaryLighter: "#DBEAFE",
+      primaryDark: "#1E3A8A", accent: "#F59E0B", accentLight: "#FEF3C7",
+      bg: "#F8FAFC", surface: "#FFFFFF", surfaceAlt: "#F1F5F9",
+      border: "#E2E8F0", borderLight: "#F1F5F9",
+      text: "#0F172A", textSecondary: "#475569", textMuted: "#94A3B8",
+      success: "#059669", successLight: "#D1FAE5",
+      danger: "#DC2626", dangerLight: "#FEE2E2",
+      warn: "#D97706",
+      chart: ["#1E40AF","#3B82F6","#6366F1","#8B5CF6","#A855F7","#059669","#0891B2","#D97706","#DC2626","#64748B"],
+      radius: 10, radiusSm: 6, radiusLg: 16, radiusFull: 9999,
+      shadow: "0 1px 3px rgba(15,23,42,0.04), 0 1px 2px rgba(15,23,42,0.06)",
+      shadowMd: "0 4px 6px -1px rgba(15,23,42,0.05), 0 2px 4px -2px rgba(15,23,42,0.05)",
+      shadowLg: "0 10px 25px -3px rgba(15,23,42,0.08), 0 4px 6px -4px rgba(15,23,42,0.04)",
+      shadowGlow: "0 0 0 3px rgba(59,130,246,0.15)",
+      fontMono: "'JetBrains Mono', 'Fira Code', monospace",
+    };
+
+    // ─── DATA ──────────────────────────────────────────────────────────
+    const PEPTIDES = [
+      {id:"bpc-157",name:"BPC-157",category:"Recovery",description:"Body Protection Compound, a pentadecapeptide derived from gastric juice."},
+      {id:"tb-500",name:"TB-500",category:"Recovery",description:"Thymosin Beta-4 fragment, associated with tissue repair and recovery."},
+      {id:"cjc-1295",name:"CJC-1295",category:"Growth Hormone",description:"Growth hormone-releasing hormone analog."},
+      {id:"ipamorelin",name:"Ipamorelin",category:"Growth Hormone",description:"Growth hormone secretagogue peptide."},
+      {id:"semaglutide",name:"Semaglutide",category:"Metabolic",description:"GLP-1 receptor agonist peptide."},
+      {id:"pt-141",name:"PT-141",category:"Other",description:"Bremelanotide, a melanocortin receptor agonist."},
+      {id:"selank",name:"Selank",category:"Cognitive",description:"Synthetic analog of immunomodulatory peptide tuftsin."},
+      {id:"semax",name:"Semax",category:"Cognitive",description:"Synthetic peptide derived from ACTH fragment."},
+      {id:"ghk-cu",name:"GHK-Cu",category:"Longevity",description:"Copper peptide associated with skin and tissue remodeling."},
+      {id:"mots-c",name:"MOTS-c",category:"Longevity",description:"Mitochondrial-derived peptide linked to metabolic regulation."},
+      {id:"ss-31",name:"SS-31 (Elamipretide)",category:"Longevity",description:"Mitochondria-targeted peptide."},
+      {id:"kisspeptin",name:"Kisspeptin-10",category:"Hormonal",description:"Peptide involved in reproductive hormone signaling."},
+      {id:"aod-9604",name:"AOD-9604",category:"Metabolic",description:"Fragment of human growth hormone associated with fat metabolism."},
+      {id:"epithalon",name:"Epithalon",category:"Longevity",description:"Tetrapeptide associated with telomerase activity."},
+      {id:"ll-37",name:"LL-37",category:"Immune",description:"Antimicrobial peptide from the cathelicidin family."},
+      {id:"thymalin",name:"Thymalin",category:"Immune",description:"Thymic peptide associated with immune modulation."},
+    ];
+    const GOALS = ["Fat Loss","Muscle Growth","Recovery","Longevity","Cognitive","Sleep","Immune Support","Other"];
+    const SIDE_EFFECTS_LIST = ["Nausea","Headache","Fatigue","Injection site reaction","Flushing","Dizziness","Appetite change","Water retention","Insomnia","Mood changes","GI discomfort","None"];
+    const TIME_RANGES = ["< 1 week","1-4 weeks","1-3 months","3+ months","Never"];
+    const FREQUENCIES = ["Daily","Twice daily","Every other day","Weekly","Twice weekly","Cycle (on/off)"];
+    const AGE_RANGES = ["18-25","26-35","36-45","46-55","56-65","65+"];
+    const GENDERS = ["Male","Female","Non-binary","Prefer not to say"];
+    const ACTIVITY_LEVELS = ["Sedentary","Lightly active","Moderately active","Very active","Athlete"];
+    const CATEGORY_COLORS = {Recovery:"#059669","Growth Hormone":"#7C3AED",Metabolic:"#D97706",Cognitive:"#2563EB",Longevity:"#0891B2",Hormonal:"#DB2777",Immune:"#DC2626",Other:"#64748B"};
+
+    function generateMockReports(){const r=[];const names=["User_A1","User_B2","User_C3","User_D4","User_E5","User_F6","User_G7","User_H8","User_I9","User_J10","User_K11","User_L12","User_M13","User_N14","User_O15"];let id=1;PEPTIDES.forEach(p=>{const c=8+Math.floor(Math.random()*40);for(let i=0;i<c;i++){const goal=GOALS[Math.floor(Math.random()*GOALS.length)];const eff=Math.floor(Math.random()*5)+1;const se=SIDE_EFFECTS_LIST.filter(()=>Math.random()>0.75);r.push({id:id++,peptideId:p.id,userId:names[Math.floor(Math.random()*names.length)],goal,dosage:Math.round((50+Math.random()*950)*10)/10,unit:Math.random()>0.5?"mcg":"mg",frequency:FREQUENCIES[Math.floor(Math.random()*FREQUENCIES.length)],durationWeeks:Math.floor(Math.random()*24)+1,effectiveness:eff,sideEffects:se.length?se:["None"],noticeableChange:["Yes","No","Unsure"][Math.floor(Math.random()*3)],timeToEffect:TIME_RANGES[Math.floor(Math.random()*TIME_RANGES.length)],ageRange:AGE_RANGES[Math.floor(Math.random()*AGE_RANGES.length)],gender:GENDERS[Math.floor(Math.random()*GENDERS.length)],activityLevel:ACTIVITY_LEVELS[Math.floor(Math.random()*ACTIVITY_LEVELS.length)],notes:"",flagged:Math.random()>0.95,createdAt:new Date(Date.now()-Math.random()*180*86400000).toISOString()});}});return r;}
+    const INITIAL_REPORTS = generateMockReports();
+
+    // ─── COMPONENTS ────────────────────────────────────────────────────
+    function GoalIcon({goal,size=16}){const p={size,strokeWidth:1.5};switch(goal){case"Fat Loss":return React.createElement(Flame,p);case"Muscle Growth":return React.createElement(Dumbbell,p);case"Recovery":return React.createElement(Heart,p);case"Longevity":return React.createElement(Activity,p);case"Cognitive":return React.createElement(Brain,p);case"Sleep":return React.createElement(Clock,p);case"Immune Support":return React.createElement(Shield,p);default:return React.createElement(Zap,p);}}
+
+    function Disclaimer(){return React.createElement("div",{style:{background:"linear-gradient(135deg,#FFFBEB 0%,#FEF3C7 100%)",border:"1px solid #FDE68A",borderRadius:T.radius,padding:"14px 18px",marginBottom:24,display:"flex",gap:12,alignItems:"flex-start"}},
+      React.createElement("div",{style:{width:28,height:28,borderRadius:T.radiusFull,background:"#FEF3C7",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,border:"1px solid #FDE68A"}},React.createElement(AlertTriangle,{size:14,color:"#D97706"})),
+      React.createElement("div",{style:{fontSize:13,color:"#92400E",lineHeight:1.6}},React.createElement("strong",{style:{color:"#78350F"}},"Disclaimer: "),"This platform shares user-reported experiences only. This is not medical advice. Peptides may not be FDA approved. Consult a licensed healthcare professional before use."));}
+
+    function StarRating({value,size=16,interactive,onChange}){return React.createElement("span",{style:{display:"inline-flex",gap:2}},[1,2,3,4,5].map(i=>React.createElement("span",{key:i,onClick:interactive?()=>onChange(i):undefined,style:{cursor:interactive?"pointer":"default",display:"inline-flex",padding:interactive?2:0}},React.createElement(Star,{size,fill:i<=value?"#F59E0B":"none",color:i<=value?"#F59E0B":"#CBD5E1",strokeWidth:1.5}))));}
+
+    function Badge({children,color=T.primary}){return React.createElement("span",{style:{display:"inline-flex",alignItems:"center",gap:4,padding:"3px 10px",borderRadius:T.radiusFull,fontSize:11,fontWeight:600,letterSpacing:0.2,background:color+"12",color,textTransform:"uppercase"}},children);}
+
+    function Card({children,style,onClick,hover}){const[h,setH]=useState(false);return React.createElement("div",{onClick,onMouseEnter:()=>setH(true),onMouseLeave:()=>setH(false),style:{background:T.surface,borderRadius:T.radiusLg,border:`1px solid ${T.border}`,padding:24,transition:"all 0.2s ease",boxShadow:T.shadow,...(hover&&h?{borderColor:T.primaryLight,boxShadow:T.shadowLg,transform:"translateY(-2px)"}:{}),...(onClick?{cursor:"pointer"}:{}),...style}},children);}
+
+    function StatCard({icon,label,value,color=T.primary}){return React.createElement(Card,{style:{padding:20}},React.createElement("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12}},React.createElement("div",{style:{width:40,height:40,borderRadius:T.radius,background:color+"10",display:"flex",alignItems:"center",justifyContent:"center"}},icon)),React.createElement("div",{style:{fontSize:28,fontWeight:700,color:T.text,letterSpacing:-0.5,fontFamily:T.fontMono}},value),React.createElement("div",{style:{fontSize:13,color:T.textSecondary,marginTop:2}},label));}
+
+    function ChartCard({title,subtitle,children}){return React.createElement(Card,{style:{padding:0}},React.createElement("div",{style:{padding:"20px 24px 0"}},React.createElement("h3",{style:{margin:0,fontSize:14,fontWeight:600,color:T.text}},title),subtitle&&React.createElement("p",{style:{margin:"2px 0 0",fontSize:12,color:T.textMuted}},subtitle)),React.createElement("div",{style:{padding:"16px 12px 12px"}},children));}
+
+    function Btn({children,onClick,variant="primary",size="md",disabled,style:extra}){const[h,setH]=useState(false);const base={display:"inline-flex",alignItems:"center",gap:8,border:"none",borderRadius:T.radius,fontWeight:600,cursor:disabled?"not-allowed":"pointer",transition:"all 0.2s ease",opacity:disabled?0.5:1,padding:size==="sm"?"6px 14px":size==="lg"?"14px 28px":"10px 20px",fontSize:size==="sm"?13:size==="lg"?15:14,letterSpacing:0.1};const v={primary:{background:h&&!disabled?"#1D4ED8":T.primary,color:"#fff"},secondary:{background:h&&!disabled?"#E2E8F0":T.surfaceAlt,color:T.text,border:`1px solid ${T.border}`},ghost:{background:h&&!disabled?T.primaryLighter:"transparent",color:T.primaryLight},danger:{background:h&&!disabled?"#FEE2E2":T.dangerLight,color:T.danger},accent:{background:h&&!disabled?"#E5A107":T.accent,color:"#fff"}};return React.createElement("button",{onClick:disabled?undefined:onClick,onMouseEnter:()=>setH(true),onMouseLeave:()=>setH(false),style:{...base,...v[variant],...extra}},children);}
+
+    function Inp({label,error,...props}){const[f,setF]=useState(false);return React.createElement("div",{style:{display:"flex",flexDirection:"column",gap:6}},label&&React.createElement("label",{style:{fontSize:13,fontWeight:600,color:T.textSecondary}},label),React.createElement("input",{...props,onFocus:e=>{setF(true);props.onFocus?.(e)},onBlur:e=>{setF(false);props.onBlur?.(e)},style:{padding:"10px 14px",borderRadius:T.radius,border:`1px solid ${error?T.danger:f?T.primaryLight:T.border}`,fontSize:14,outline:"none",transition:"all 0.2s",boxShadow:f?T.shadowGlow:"none",background:T.surface,color:T.text,...props.style}}),error&&React.createElement("span",{style:{fontSize:12,color:T.danger}},error));}
+
+    function Sel({label,options,error,...props}){const[f,setF]=useState(false);return React.createElement("div",{style:{display:"flex",flexDirection:"column",gap:6}},label&&React.createElement("label",{style:{fontSize:13,fontWeight:600,color:T.textSecondary}},label),React.createElement("select",{...props,onFocus:()=>setF(true),onBlur:()=>setF(false),style:{padding:"10px 14px",borderRadius:T.radius,border:`1px solid ${error?T.danger:f?T.primaryLight:T.border}`,fontSize:14,outline:"none",background:T.surface,boxShadow:f?T.shadowGlow:"none",color:props.value?T.text:T.textMuted,transition:"all 0.2s",...props.style}},React.createElement("option",{value:""},"Select..."),options.map(o=>React.createElement("option",{key:o,value:o},o))),error&&React.createElement("span",{style:{fontSize:12,color:T.danger}},error));}
+
+    function SectionHeader({title,subtitle,action}){return React.createElement("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"flex-end",marginBottom:16}},React.createElement("div",null,React.createElement("h2",{style:{margin:0,fontSize:20,fontWeight:700,color:T.text,letterSpacing:-0.3}},title),subtitle&&React.createElement("p",{style:{margin:"4px 0 0",fontSize:14,color:T.textSecondary}},subtitle)),action);}
+
+    function DataFooter({count}){return React.createElement("div",{style:{marginTop:20,padding:"10px 16px",background:T.surfaceAlt,borderRadius:T.radius,display:"flex",alignItems:"center",gap:8}},React.createElement(Info,{size:13,color:T.textMuted}),React.createElement("span",{style:{fontSize:12,color:T.textMuted}},"User-reported data only. Not clinical research."+(count?` Sample size: ${count} reports.`:"")));}
+
+    const CTooltip=({active,payload,label})=>{if(!active||!payload?.length)return null;return React.createElement("div",{style:{background:T.text,borderRadius:T.radiusSm,padding:"8px 12px",boxShadow:T.shadowLg}},React.createElement("div",{style:{fontSize:11,color:T.textMuted,marginBottom:4}},label),payload.map((p,i)=>React.createElement("div",{key:i,style:{fontSize:13,fontWeight:600,color:"#fff",display:"flex",alignItems:"center",gap:6}},React.createElement("span",{style:{width:8,height:8,borderRadius:T.radiusFull,background:p.color,display:"inline-block"}}),p.name,": ",p.value)));};
+
+    // ─── HOME PAGE ─────────────────────────────────────────────────────
+    function HomePage({navigate}){
+      const stats=useMemo(()=>({totalReports:INITIAL_REPORTS.length,totalPeptides:PEPTIDES.length,avgEffectiveness:(INITIAL_REPORTS.reduce((s,r)=>s+r.effectiveness,0)/INITIAL_REPORTS.length).toFixed(1),uniqueUsers:new Set(INITIAL_REPORTS.map(r=>r.userId)).size}),[]);
+      const topPeptides=useMemo(()=>{const g={};INITIAL_REPORTS.forEach(r=>{if(!g[r.peptideId])g[r.peptideId]={count:0,effSum:0};g[r.peptideId].count++;g[r.peptideId].effSum+=r.effectiveness;});return PEPTIDES.map(p=>({...p,count:g[p.id]?.count||0,avgEff:g[p.id]?(g[p.id].effSum/g[p.id].count).toFixed(1):0})).sort((a,b)=>b.count-a.count).slice(0,6);},[]);
+      const trendData=useMemo(()=>{const m={};INITIAL_REPORTS.forEach(r=>{const d=new Date(r.createdAt);const k=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;m[k]=(m[k]||0)+1;});return Object.entries(m).sort().map(([month,count])=>({month:new Date(month+"-01").toLocaleDateString("en",{month:"short"}),count}));},[]);
+
+      return React.createElement("div",null,
+        React.createElement(Disclaimer),
+        // Hero
+        React.createElement("div",{style:{background:`linear-gradient(135deg,${T.primary} 0%,#3B82F6 50%,#6366F1 100%)`,borderRadius:T.radiusLg,padding:"48px 40px",marginBottom:28,position:"relative",overflow:"hidden"}},
+          React.createElement("div",{style:{position:"absolute",top:-60,right:-60,width:200,height:200,borderRadius:T.radiusFull,background:"rgba(255,255,255,0.06)"}}),
+          React.createElement("div",{style:{position:"relative",zIndex:1}},
+            React.createElement("div",{style:{display:"flex",alignItems:"center",gap:12,marginBottom:16}},
+              React.createElement("div",{style:{width:44,height:44,borderRadius:T.radius,background:"rgba(255,255,255,0.15)",display:"flex",alignItems:"center",justifyContent:"center"}},React.createElement(Database,{size:24,color:"#fff"})),
+              React.createElement("h1",{style:{margin:0,fontSize:30,fontWeight:800,color:"#fff",letterSpacing:-0.5}},"PeptideTracker")),
+            React.createElement("p",{style:{margin:"0 0 24px",color:"rgba(255,255,255,0.8)",fontSize:16,maxWidth:540,lineHeight:1.6}},"A transparent, community-driven repository of self-reported peptide experiences. Browse structured data. No medical claims. No vendor links."),
+            React.createElement("div",{style:{display:"flex",gap:12}},
+              React.createElement(Btn,{variant:"accent",size:"lg",onClick:()=>navigate("browse")},React.createElement(Search,{size:18})," Browse Database"),
+              React.createElement(Btn,{size:"lg",onClick:()=>navigate("submit"),style:{background:"rgba(255,255,255,0.15)"}},React.createElement(Plus,{size:18})," Submit Report")))),
+        // Stats
+        React.createElement("div",{style:{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:14,marginBottom:32}},
+          React.createElement(StatCard,{icon:React.createElement(FileText,{size:20,color:T.primary}),label:"Total Reports",value:stats.totalReports}),
+          React.createElement(StatCard,{icon:React.createElement(Beaker,{size:20,color:"#7C3AED"}),label:"Peptides Tracked",value:stats.totalPeptides,color:"#7C3AED"}),
+          React.createElement(StatCard,{icon:React.createElement(Star,{size:20,color:T.accent}),label:"Avg. Effectiveness",value:`${stats.avgEffectiveness}/5`,color:T.accent}),
+          React.createElement(StatCard,{icon:React.createElement(Users,{size:20,color:T.success}),label:"Contributors",value:stats.uniqueUsers,color:T.success})),
+        // Trend + Top
+        React.createElement("div",{style:{display:"grid",gridTemplateColumns:"1fr 1.6fr",gap:16,marginBottom:32}},
+          React.createElement(ChartCard,{title:"Submission Trend",subtitle:"Reports over time"},
+            React.createElement(ResponsiveContainer,{width:"100%",height:200},
+              React.createElement(AreaChart,{data:trendData},
+                React.createElement("defs",null,React.createElement("linearGradient",{id:"ag",x1:"0",y1:"0",x2:"0",y2:"1"},React.createElement("stop",{offset:"0%",stopColor:T.primaryLight,stopOpacity:0.3}),React.createElement("stop",{offset:"100%",stopColor:T.primaryLight,stopOpacity:0}))),
+                React.createElement(CartesianGrid,{strokeDasharray:"3 3",stroke:T.borderLight,vertical:false}),
+                React.createElement(XAxis,{dataKey:"month",fontSize:11,tickLine:false,axisLine:false,stroke:T.textMuted}),
+                React.createElement(YAxis,{fontSize:11,tickLine:false,axisLine:false,stroke:T.textMuted}),
+                React.createElement(Tooltip,{content:React.createElement(CTooltip)}),
+                React.createElement(Area,{type:"monotone",dataKey:"count",stroke:T.primaryLight,strokeWidth:2,fill:"url(#ag)",name:"Reports"})))),
+          React.createElement("div",null,
+            React.createElement(SectionHeader,{title:"Most Reported",subtitle:"Top peptides by volume",action:React.createElement(Btn,{variant:"ghost",size:"sm",onClick:()=>navigate("browse")},"View all ",React.createElement(ChevronRight,{size:14}))}),
+            React.createElement("div",{style:{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10}},
+              topPeptides.map((p,i)=>React.createElement(Card,{key:p.id,hover:true,onClick:()=>navigate("peptide",p.id),style:{padding:16}},
+                React.createElement("div",{style:{display:"flex",alignItems:"center",gap:8,marginBottom:10}},
+                  React.createElement("span",{style:{width:24,height:24,borderRadius:T.radiusFull,display:"inline-flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,background:i<3?T.primaryLighter:T.surfaceAlt,color:i<3?T.primary:T.textMuted}},i+1),
+                  React.createElement("span",{style:{fontWeight:700,fontSize:14,color:T.text}},p.name)),
+                React.createElement(Badge,{color:CATEGORY_COLORS[p.category]||T.primary},p.category),
+                React.createElement("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:12}},
+                  React.createElement("div",null,React.createElement("span",{style:{fontSize:22,fontWeight:800,color:T.primary,fontFamily:T.fontMono}},p.count),React.createElement("span",{style:{fontSize:11,color:T.textMuted,marginLeft:4}},"reports")),
+                  React.createElement("div",{style:{display:"flex",alignItems:"center",gap:4}},React.createElement(StarRating,{value:Math.round(parseFloat(p.avgEff)),size:12}),React.createElement("span",{style:{fontSize:12,color:T.textSecondary,fontWeight:600}},p.avgEff)))))))));
+    }
+
+    // ─── BROWSE PAGE ───────────────────────────────────────────────────
+    function BrowsePage({navigate,reports}){
+      const[search,setSearch]=useState("");const[catFilter,setCatFilter]=useState("");const[goalFilter,setGoalFilter]=useState("");const[sort,setSort]=useState("reports");
+      const categories=useMemo(()=>[...new Set(PEPTIDES.map(p=>p.category))],[]);
+      const peptideStats=useMemo(()=>{const g={};reports.forEach(r=>{if(!g[r.peptideId])g[r.peptideId]={count:0,effSum:0,goals:{}};g[r.peptideId].count++;g[r.peptideId].effSum+=r.effectiveness;g[r.peptideId].goals[r.goal]=(g[r.peptideId].goals[r.goal]||0)+1;});return PEPTIDES.map(p=>{const s=g[p.id]||{count:0,effSum:0,goals:{}};const tg=Object.entries(s.goals).sort((a,b)=>b[1]-a[1])[0];return{...p,count:s.count,avgEff:s.count?(s.effSum/s.count).toFixed(1):"0.0",topGoal:tg?tg[0]:"N/A",goals:s.goals};});},[reports]);
+      const filtered=useMemo(()=>{let l=peptideStats;if(search)l=l.filter(p=>p.name.toLowerCase().includes(search.toLowerCase()));if(catFilter)l=l.filter(p=>p.category===catFilter);if(goalFilter)l=l.filter(p=>p.goals[goalFilter]>0);if(sort==="reports")l=[...l].sort((a,b)=>b.count-a.count);else if(sort==="effectiveness")l=[...l].sort((a,b)=>parseFloat(b.avgEff)-parseFloat(a.avgEff));else l=[...l].sort((a,b)=>a.name.localeCompare(b.name));return l;},[peptideStats,search,catFilter,goalFilter,sort]);
+
+      return React.createElement("div",null,
+        React.createElement(Disclaimer),
+        React.createElement(SectionHeader,{title:"Browse Peptides",subtitle:`${filtered.length} peptides${catFilter?` in ${catFilter}`:""}`}),
+        React.createElement(Card,{style:{padding:16,marginBottom:20}},
+          React.createElement("div",{style:{display:"flex",gap:12,flexWrap:"wrap",alignItems:"flex-end"}},
+            React.createElement("div",{style:{flex:1,minWidth:200}},React.createElement(Inp,{placeholder:"Search peptides...",value:search,onChange:e=>setSearch(e.target.value)})),
+            React.createElement(Sel,{options:categories,value:catFilter,label:"Category",onChange:e=>setCatFilter(e.target.value)}),
+            React.createElement(Sel,{options:GOALS,value:goalFilter,label:"Goal",onChange:e=>setGoalFilter(e.target.value)}),
+            React.createElement(Sel,{options:["reports","effectiveness","name"],value:sort,label:"Sort",onChange:e=>setSort(e.target.value)}),
+            (catFilter||goalFilter||search)&&React.createElement(Btn,{variant:"ghost",size:"sm",onClick:()=>{setCatFilter("");setGoalFilter("");setSearch("");}},React.createElement(X,{size:14})," Clear"))),
+        React.createElement("div",{style:{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:12}},
+          filtered.map(p=>React.createElement(Card,{key:p.id,hover:true,onClick:()=>navigate("peptide",p.id),style:{padding:20}},
+            React.createElement("div",{style:{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}},
+              React.createElement("div",{style:{flex:1}},
+                React.createElement("div",{style:{display:"flex",alignItems:"center",gap:10,marginBottom:8}},
+                  React.createElement("div",null,
+                    React.createElement("div",{style:{fontWeight:700,fontSize:15,color:T.text}},p.name),
+                    React.createElement("div",{style:{display:"flex",gap:6,marginTop:2}},
+                      React.createElement(Badge,{color:CATEGORY_COLORS[p.category]||T.primary},p.category),
+                      React.createElement(Badge,{color:T.textSecondary},React.createElement(GoalIcon,{goal:p.topGoal,size:10})," ",p.topGoal)))),
+                React.createElement("div",{style:{fontSize:13,color:T.textSecondary,lineHeight:1.5,marginTop:4}},p.description)),
+              React.createElement("div",{style:{textAlign:"right",flexShrink:0,marginLeft:20}},
+                React.createElement("div",{style:{fontSize:26,fontWeight:800,color:T.primary,fontFamily:T.fontMono}},p.count),
+                React.createElement("div",{style:{fontSize:11,color:T.textMuted,marginBottom:6}},"reports"),
+                React.createElement("div",{style:{display:"flex",alignItems:"center",gap:4,justifyContent:"flex-end"}},React.createElement(StarRating,{value:Math.round(parseFloat(p.avgEff)),size:12}),React.createElement("span",{style:{fontSize:12,color:T.textSecondary,fontWeight:600}},p.avgEff))))))),
+        filtered.length===0&&React.createElement(Card,{style:{textAlign:"center",padding:60}},React.createElement(Search,{size:32,color:T.textMuted,style:{marginBottom:12}}),React.createElement("div",{style:{fontSize:15,fontWeight:600,color:T.textSecondary}},"No peptides match your filters")));
+    }
+
+    // ─── PEPTIDE DETAIL PAGE ───────────────────────────────────────────
+    function PeptideDetailPage({peptideId,navigate,reports}){
+      const peptide=PEPTIDES.find(p=>p.id===peptideId);
+      const pr=useMemo(()=>reports.filter(r=>r.peptideId===peptideId),[reports,peptideId]);
+      if(!peptide)return React.createElement("div",null,"Not found.");
+      const stats=useMemo(()=>{const n=pr.length;if(!n)return null;const avgEff=(pr.reduce((s,r)=>s+r.effectiveness,0)/n).toFixed(1);const avgDosage=(pr.reduce((s,r)=>s+r.dosage,0)/n).toFixed(0);const gc={};pr.forEach(r=>gc[r.goal]=(gc[r.goal]||0)+1);const tg=Object.entries(gc).sort((a,b)=>b[1]-a[1])[0];const sec={};pr.forEach(r=>r.sideEffects.forEach(se=>sec[se]=(sec[se]||0)+1));const cp=Math.round(pr.filter(r=>r.noticeableChange==="Yes").length/n*100);const ed=[1,2,3,4,5].map(v=>({rating:`${v}`,count:pr.filter(r=>r.effectiveness===v).length}));const gd=Object.entries(gc).map(([name,value])=>({name,value})).sort((a,b)=>b.value-a.value);const sed=Object.entries(sec).filter(([k])=>k!=="None").map(([name,value])=>({name,value})).sort((a,b)=>b.value-a.value).slice(0,8);const ttp={};pr.forEach(r=>ttp[r.timeToEffect]=(ttp[r.timeToEffect]||0)+1);const td=TIME_RANGES.map(t=>({name:t,count:ttp[t]||0}));const db={};pr.forEach(r=>{const b=Math.round(r.dosage/100)*100;if(!db[b])db[b]={sum:0,count:0};db[b].sum+=r.effectiveness;db[b].count++;});const ded=Object.entries(db).map(([dose,d])=>({dose:`${dose}`,avgEff:parseFloat((d.sum/d.count).toFixed(1)),reports:d.count})).sort((a,b)=>parseInt(a.dose)-parseInt(b.dose));return{n,avgEff,avgDosage,topGoal:tg,changePct:cp,effDist:ed,goalData:gd,seData:sed,timeData:td,doseEffData:ded};},[pr]);
+
+      return React.createElement("div",null,
+        React.createElement(Disclaimer),
+        React.createElement("button",{onClick:()=>navigate("browse"),style:{display:"flex",alignItems:"center",gap:6,background:"none",border:"none",color:T.primaryLight,cursor:"pointer",fontSize:13,fontWeight:600,marginBottom:20,padding:0}},React.createElement(ArrowLeft,{size:15})," Back to all peptides"),
+        React.createElement("div",{style:{background:`linear-gradient(135deg,${(CATEGORY_COLORS[peptide.category]||T.primary)}08 0%,${T.surfaceAlt} 100%)`,borderRadius:T.radiusLg,padding:"28px 32px",marginBottom:24,border:`1px solid ${T.border}`}},
+          React.createElement("h1",{style:{margin:0,fontSize:26,fontWeight:800,color:T.text,letterSpacing:-0.5}},peptide.name),
+          React.createElement("div",{style:{display:"flex",gap:8,marginTop:8}},React.createElement(Badge,{color:CATEGORY_COLORS[peptide.category]||T.primary},peptide.category),stats?.topGoal&&React.createElement(Badge,{color:T.textSecondary},"Top goal: ",stats.topGoal[0])),
+          React.createElement("p",{style:{color:T.textSecondary,margin:"8px 0 0",fontSize:14,lineHeight:1.6}},peptide.description)),
+        !stats?React.createElement(Card,{style:{textAlign:"center",padding:60}},React.createElement("div",{style:{fontWeight:600,color:T.textSecondary}},"No reports yet.")):
+        React.createElement("div",null,
+          React.createElement("div",{style:{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:24}},
+            React.createElement(StatCard,{icon:React.createElement(FileText,{size:18,color:T.primary}),label:"Total Reports",value:stats.n}),
+            React.createElement(StatCard,{icon:React.createElement(Star,{size:18,color:T.accent}),label:"Avg Effectiveness",value:`${stats.avgEff}/5`,color:T.accent}),
+            React.createElement(StatCard,{icon:React.createElement(Hash,{size:18,color:"#7C3AED"}),label:"Avg Dosage",value:stats.avgDosage,color:"#7C3AED"}),
+            React.createElement(StatCard,{icon:React.createElement(TrendingUp,{size:18,color:T.success}),label:"Noticed Change",value:`${stats.changePct}%`,color:T.success})),
+          React.createElement("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:20}},
+            React.createElement(ChartCard,{title:"Effectiveness Distribution",subtitle:"User ratings (1-5)"},React.createElement(ResponsiveContainer,{width:"100%",height:210},React.createElement(BarChart,{data:stats.effDist},React.createElement(CartesianGrid,{strokeDasharray:"3 3",stroke:T.borderLight,vertical:false}),React.createElement(XAxis,{dataKey:"rating",fontSize:12,tickLine:false,axisLine:false,stroke:T.textMuted}),React.createElement(YAxis,{fontSize:12,tickLine:false,axisLine:false,stroke:T.textMuted}),React.createElement(Tooltip,{content:React.createElement(CTooltip)}),React.createElement(Bar,{dataKey:"count",fill:T.primary,radius:[6,6,0,0],name:"Reports"})))),
+            React.createElement(ChartCard,{title:"Goals Breakdown",subtitle:"Why users report using this"},React.createElement(ResponsiveContainer,{width:"100%",height:210},React.createElement(PieChart,null,React.createElement(Pie,{data:stats.goalData,cx:"50%",cy:"50%",innerRadius:50,outerRadius:85,dataKey:"value",paddingAngle:2,strokeWidth:2,stroke:T.surface,label:({name,percent})=>`${name} ${(percent*100).toFixed(0)}%`,labelLine:false,fontSize:10},stats.goalData.map((_,i)=>React.createElement(Cell,{key:i,fill:T.chart[i%T.chart.length]}))),React.createElement(Tooltip,{content:React.createElement(CTooltip)})))),
+            React.createElement(ChartCard,{title:"Dosage vs Effectiveness",subtitle:"Average rating by dosage range"},React.createElement(ResponsiveContainer,{width:"100%",height:210},React.createElement(AreaChart,{data:stats.doseEffData},React.createElement("defs",null,React.createElement("linearGradient",{id:"dg",x1:"0",y1:"0",x2:"0",y2:"1"},React.createElement("stop",{offset:"0%",stopColor:"#6366F1",stopOpacity:0.2}),React.createElement("stop",{offset:"100%",stopColor:"#6366F1",stopOpacity:0}))),React.createElement(CartesianGrid,{strokeDasharray:"3 3",stroke:T.borderLight,vertical:false}),React.createElement(XAxis,{dataKey:"dose",fontSize:11,tickLine:false,axisLine:false,stroke:T.textMuted}),React.createElement(YAxis,{domain:[0,5],fontSize:11,tickLine:false,axisLine:false,stroke:T.textMuted}),React.createElement(Tooltip,{content:React.createElement(CTooltip)}),React.createElement(Area,{type:"monotone",dataKey:"avgEff",stroke:"#6366F1",strokeWidth:2.5,fill:"url(#dg)",name:"Avg Effectiveness",dot:{r:4,fill:"#6366F1",stroke:T.surface,strokeWidth:2}})))),
+            React.createElement(ChartCard,{title:"Time to Notice Effects",subtitle:"How long before users see changes"},React.createElement(ResponsiveContainer,{width:"100%",height:210},React.createElement(BarChart,{data:stats.timeData},React.createElement(CartesianGrid,{strokeDasharray:"3 3",stroke:T.borderLight,vertical:false}),React.createElement(XAxis,{dataKey:"name",fontSize:10,tickLine:false,axisLine:false,stroke:T.textMuted}),React.createElement(YAxis,{fontSize:11,tickLine:false,axisLine:false,stroke:T.textMuted}),React.createElement(Tooltip,{content:React.createElement(CTooltip)}),React.createElement(Bar,{dataKey:"count",fill:"#0891B2",radius:[6,6,0,0],name:"Reports"}))))),
+          React.createElement(Card,null,
+            React.createElement("h3",{style:{margin:"0 0 16px",fontSize:14,fontWeight:600,color:T.text}},"Most Reported Side Effects"),
+            stats.seData.length===0?React.createElement("p",{style:{color:T.textMuted}},"No side effects reported."):
+            React.createElement("div",{style:{display:"flex",flexDirection:"column",gap:10}},stats.seData.map(se=>{const pct=Math.round((se.value/stats.n)*100);return React.createElement("div",{key:se.name,style:{display:"flex",alignItems:"center",gap:14}},React.createElement("span",{style:{width:140,fontSize:13,fontWeight:500,color:T.textSecondary}},se.name),React.createElement("div",{style:{flex:1,height:10,background:T.surfaceAlt,borderRadius:T.radiusFull,overflow:"hidden"}},React.createElement("div",{style:{height:"100%",width:`${pct}%`,borderRadius:T.radiusFull,background:pct>40?"#DC2626":pct>20?"#F59E0B":"#3B82F6",transition:"width 0.5s ease"}})),React.createElement("span",{style:{fontSize:12,fontWeight:600,color:T.textSecondary,width:70,textAlign:"right",fontFamily:T.fontMono}},pct,"% (",se.value,")"));}))),
+          React.createElement(DataFooter,{count:stats.n})));
+    }
+
+    // ─── ANALYTICS PAGE ────────────────────────────────────────────────
+    function AnalyticsPage({reports}){
+      const a=useMemo(()=>{const gc={};const se={};const pe={};const cl={};reports.forEach(r=>{gc[r.goal]=(gc[r.goal]||0)+1;r.sideEffects.forEach(s=>{if(s!=="None")se[s]=(se[s]||0)+1});if(!pe[r.peptideId])pe[r.peptideId]={sum:0,count:0};pe[r.peptideId].sum+=r.effectiveness;pe[r.peptideId].count++;if(!cl[r.goal])cl[r.goal]=[];cl[r.goal].push(r.durationWeeks);});return{goalChart:Object.entries(gc).map(([n,v])=>({name:n,count:v})).sort((a,b)=>b.count-a.count),seChart:Object.entries(se).map(([n,c])=>({name:n,count:c})).sort((a,b)=>b.count-a.count).slice(0,10),topRated:Object.entries(pe).filter(([_,d])=>d.count>=5).map(([id,d])=>({name:PEPTIDES.find(p=>p.id===id)?.name||id,avgEff:parseFloat((d.sum/d.count).toFixed(2))})).sort((a,b)=>b.avgEff-a.avgEff).slice(0,10),avgCycle:Object.entries(cl).map(([g,w])=>({name:g,avgWeeks:parseFloat((w.reduce((s,v)=>s+v,0)/w.length).toFixed(1))})).sort((a,b)=>b.avgWeeks-a.avgWeeks)};},[reports]);
+
+      const makeChart=(title,sub,data,key,color,layout)=>React.createElement(ChartCard,{title,subtitle:sub},React.createElement(ResponsiveContainer,{width:"100%",height:260},React.createElement(BarChart,{data,layout:"vertical"},React.createElement(CartesianGrid,{strokeDasharray:"3 3",stroke:T.borderLight,horizontal:false}),React.createElement(XAxis,{type:"number",fontSize:11,tickLine:false,axisLine:false,stroke:T.textMuted,...(key==="avgEff"?{domain:[0,5]}:{})}),React.createElement(YAxis,{type:"category",dataKey:"name",fontSize:12,tickLine:false,axisLine:false,stroke:T.textSecondary,width:110}),React.createElement(Tooltip,{content:React.createElement(CTooltip)}),React.createElement(Bar,{dataKey:key,fill:color,radius:[0,6,6,0],name:title}))));
+
+      return React.createElement("div",null,
+        React.createElement(Disclaimer),
+        React.createElement(SectionHeader,{title:"Analytics Dashboard",subtitle:`Aggregated patterns from ${reports.length} submissions`}),
+        React.createElement("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:20}},
+          makeChart("Reports by Goal","Distribution of objectives",a.goalChart,"count",T.primary),
+          makeChart("Top Rated Peptides","Min 5 reports, by effectiveness",a.topRated,"avgEff","#7C3AED"),
+          makeChart("Common Side Effects","Across all reports",a.seChart,"count","#DC2626"),
+          makeChart("Avg Cycle Length","Mean weeks per goal",a.avgCycle,"avgWeeks",T.success)),
+        React.createElement(DataFooter,{count:reports.length}));
+    }
+
+    // ─── LOGIN PAGE ────────────────────────────────────────────────────
+    function LoginPage({onLogin,navigate}){
+      const[email,setEmail]=useState("");const[pw,setPw]=useState("");const[mode,setMode]=useState("login");const[err,setErr]=useState("");
+      const go=()=>{if(!email.includes("@")||!pw){setErr("Please enter a valid email and password.");return;}onLogin({email,name:email.split("@")[0]});navigate("home");};
+      return React.createElement("div",{style:{maxWidth:420,margin:"60px auto"}},React.createElement(Card,{style:{padding:32}},
+        React.createElement("div",{style:{textAlign:"center",marginBottom:28}},
+          React.createElement("div",{style:{width:56,height:56,borderRadius:T.radiusFull,background:T.primaryLighter,display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 16px"}},React.createElement(Database,{size:24,color:T.primary})),
+          React.createElement("h2",{style:{margin:0,fontSize:22,fontWeight:800,color:T.text}},mode==="login"?"Welcome Back":"Create Account"),
+          React.createElement("p",{style:{color:T.textSecondary,fontSize:14,margin:"6px 0 0"}},mode==="login"?"Sign in to submit experience reports":"Email verification required")),
+        err&&React.createElement("div",{style:{background:T.dangerLight,color:T.danger,padding:"10px 14px",borderRadius:T.radius,fontSize:13,fontWeight:500,marginBottom:16,display:"flex",alignItems:"center",gap:8}},React.createElement(AlertTriangle,{size:14}),err),
+        React.createElement("div",{style:{display:"flex",flexDirection:"column",gap:14,marginBottom:24}},
+          React.createElement(Inp,{label:"Email",type:"email",value:email,onChange:e=>setEmail(e.target.value),placeholder:"you@example.com"}),
+          React.createElement(Inp,{label:"Password",type:"password",value:pw,onChange:e=>setPw(e.target.value),placeholder:"Enter password"})),
+        React.createElement(Btn,{size:"lg",onClick:go,style:{width:"100%",justifyContent:"center"}},mode==="login"?"Sign In":"Create Account"),
+        React.createElement("div",{style:{textAlign:"center",marginTop:20}},React.createElement("button",{onClick:()=>setMode(m=>m==="login"?"register":"login"),style:{background:"none",border:"none",color:T.primaryLight,cursor:"pointer",fontSize:14,fontWeight:600}},mode==="login"?"Need an account? Register":"Already registered? Sign in"))));
+    }
+
+    // ─── SUBMIT PAGE (simplified for static) ───────────────────────────
+    function SubmitPage({user,navigate,onSubmit}){
+      const[form,setForm]=useState({peptideId:"",goal:"",dosage:"",unit:"mcg",frequency:"",durationWeeks:"",effectiveness:3,sideEffects:[],noticeableChange:"",timeToEffect:""});
+      const[done,setDone]=useState(false);const[errors,setErrors]=useState({});
+      if(!user)return React.createElement(Card,{style:{textAlign:"center",padding:60,maxWidth:440,margin:"40px auto"}},React.createElement("div",{style:{width:56,height:56,borderRadius:T.radiusFull,background:T.primaryLighter,display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 16px"}},React.createElement(LogIn,{size:24,color:T.primary})),React.createElement("h3",{style:{margin:"0 0 8px",fontSize:18,fontWeight:700,color:T.text}},"Sign In Required"),React.createElement("p",{style:{color:T.textSecondary,marginBottom:20,fontSize:14}},"You must be signed in to submit a report."),React.createElement(Btn,{size:"lg",onClick:()=>navigate("login")},React.createElement(LogIn,{size:16})," Sign In"));
+      if(done)return React.createElement(Card,{style:{textAlign:"center",padding:60,maxWidth:480,margin:"40px auto"}},React.createElement("div",{style:{width:56,height:56,borderRadius:T.radiusFull,background:T.successLight,display:"flex",alignItems:"center",justifyContent:"center",margin:"0 auto 16px"}},React.createElement(Check,{size:28,color:T.success})),React.createElement("h3",{style:{margin:"0 0 8px",fontSize:20,fontWeight:700,color:T.success}},"Report Submitted!"),React.createElement("p",{style:{color:T.textSecondary,marginBottom:24,fontSize:14}},"Thank you for contributing."),React.createElement("div",{style:{display:"flex",gap:10,justifyContent:"center"}},React.createElement(Btn,{onClick:()=>{setDone(false);setForm({peptideId:"",goal:"",dosage:"",unit:"mcg",frequency:"",durationWeeks:"",effectiveness:3,sideEffects:[],noticeableChange:"",timeToEffect:""});}},React.createElement(Plus,{size:16})," Submit Another"),React.createElement(Btn,{variant:"secondary",onClick:()=>navigate("browse")},"Browse")));
+      const submit=()=>{const e={};if(!form.peptideId)e.peptideId="Required";if(!form.goal)e.goal="Required";if(!form.dosage)e.dosage="Required";if(!form.frequency)e.frequency="Required";if(!form.durationWeeks)e.durationWeeks="Required";setErrors(e);if(Object.keys(e).length)return;onSubmit({...form,dosage:parseFloat(form.dosage),durationWeeks:parseInt(form.durationWeeks),userId:user.email,id:Date.now(),flagged:false,createdAt:new Date().toISOString(),sideEffects:form.sideEffects.length?form.sideEffects:["None"]});setDone(true);};
+      const toggleSE=se=>setForm(f=>({...f,sideEffects:f.sideEffects.includes(se)?f.sideEffects.filter(s=>s!==se):[...f.sideEffects,se]}));
+      return React.createElement("div",{style:{maxWidth:680,margin:"0 auto"}},
+        React.createElement(Disclaimer),
+        React.createElement(SectionHeader,{title:"Submit Experience Report",subtitle:"Fields marked * are required."}),
+        React.createElement(Card,{style:{marginBottom:16}},
+          React.createElement("h3",{style:{margin:"0 0 20px",fontSize:15,fontWeight:700,color:T.text}},"Peptide & Dosage"),
+          React.createElement("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:16}},
+            React.createElement(Sel,{label:"Peptide *",options:PEPTIDES.map(p=>p.name),error:errors.peptideId,value:form.peptideId?PEPTIDES.find(p=>p.id===form.peptideId)?.name:"",onChange:e=>setForm(f=>({...f,peptideId:PEPTIDES.find(p=>p.name===e.target.value)?.id||""}))}),
+            React.createElement(Sel,{label:"Goal *",options:GOALS,value:form.goal,error:errors.goal,onChange:e=>setForm(f=>({...f,goal:e.target.value}))})),
+          React.createElement("div",{style:{display:"grid",gridTemplateColumns:"1fr 100px 1fr 1fr",gap:16}},
+            React.createElement(Inp,{label:"Dosage *",type:"number",value:form.dosage,error:errors.dosage,onChange:e=>setForm(f=>({...f,dosage:e.target.value})),placeholder:"e.g. 250"}),
+            React.createElement(Sel,{label:"Unit",options:["mcg","mg"],value:form.unit,onChange:e=>setForm(f=>({...f,unit:e.target.value}))}),
+            React.createElement(Sel,{label:"Frequency *",options:FREQUENCIES,value:form.frequency,error:errors.frequency,onChange:e=>setForm(f=>({...f,frequency:e.target.value}))}),
+            React.createElement(Inp,{label:"Duration (weeks) *",type:"number",value:form.durationWeeks,error:errors.durationWeeks,onChange:e=>setForm(f=>({...f,durationWeeks:e.target.value})),placeholder:"e.g. 8"}))),
+        React.createElement(Card,{style:{marginBottom:16}},
+          React.createElement("h3",{style:{margin:"0 0 20px",fontSize:15,fontWeight:700,color:T.text}},"Experience"),
+          React.createElement("div",{style:{marginBottom:16}},React.createElement("label",{style:{fontSize:13,fontWeight:600,color:T.textSecondary,display:"block",marginBottom:10}},"Effectiveness * - ",React.createElement("span",{style:{color:T.accent,fontWeight:700}},form.effectiveness,"/5")),React.createElement(StarRating,{value:form.effectiveness,size:32,interactive:true,onChange:v=>setForm(f=>({...f,effectiveness:v}))})),
+          React.createElement("label",{style:{fontSize:13,fontWeight:600,color:T.textSecondary,display:"block",marginBottom:10}},"Side Effects"),
+          React.createElement("div",{style:{display:"flex",flexWrap:"wrap",gap:8}},SIDE_EFFECTS_LIST.map(se=>{const a=form.sideEffects.includes(se);return React.createElement("button",{key:se,onClick:()=>toggleSE(se),style:{padding:"7px 14px",borderRadius:T.radiusFull,fontSize:13,fontWeight:500,border:`1.5px solid ${a?T.primary:T.border}`,background:a?T.primaryLighter:T.surface,color:a?T.primary:T.textSecondary,cursor:"pointer",transition:"all 0.15s",display:"flex",alignItems:"center",gap:5}},a&&React.createElement(Check,{size:13}),se);}))),
+        React.createElement("div",{style:{display:"flex",justifyContent:"flex-end"}},React.createElement(Btn,{size:"lg",variant:"accent",onClick:submit},React.createElement(Check,{size:18})," Submit Report")));
+    }
+
+    // ─── MAIN APP ──────────────────────────────────────────────────────
+    function App(){
+      const[page,setPage]=useState("home");const[param,setParam]=useState(null);const[user,setUser]=useState(null);const[reports,setReports]=useState(INITIAL_REPORTS);
+      const nav=useCallback((p,pr)=>{setPage(p);setParam(pr||null);window.scrollTo(0,0);},[]);
+      const onSubmit=useCallback(r=>setReports(prev=>[r,...prev]),[]);
+      const navItems=[{id:"home",label:"Home",icon:React.createElement(Database,{size:15})},{id:"browse",label:"Browse",icon:React.createElement(Search,{size:15})},{id:"submit",label:"Submit",icon:React.createElement(Plus,{size:15})},{id:"analytics",label:"Analytics",icon:React.createElement(TrendingUp,{size:15})}];
+
+      return React.createElement("div",{style:{minHeight:"100vh",background:T.bg}},
+        // Header
+        React.createElement("header",{style:{background:"rgba(255,255,255,0.85)",backdropFilter:"blur(12px)",borderBottom:`1px solid ${T.border}`,padding:"0 24px",position:"sticky",top:0,zIndex:100}},
+          React.createElement("div",{style:{maxWidth:1120,margin:"0 auto",display:"flex",alignItems:"center",justifyContent:"space-between",height:60}},
+            React.createElement("div",{style:{display:"flex",alignItems:"center",gap:24}},
+              React.createElement("button",{onClick:()=>nav("home"),style:{display:"flex",alignItems:"center",gap:10,background:"none",border:"none",cursor:"pointer"}},
+                React.createElement("div",{style:{width:32,height:32,borderRadius:T.radiusSm,background:T.primary,display:"flex",alignItems:"center",justifyContent:"center"}},React.createElement(Database,{size:16,color:"#fff"})),
+                React.createElement("span",{style:{fontWeight:800,fontSize:16,color:T.text,letterSpacing:-0.3}},"PeptideTracker")),
+              React.createElement("nav",{style:{display:"flex",gap:2}},navItems.map(n=>React.createElement("button",{key:n.id,onClick:()=>nav(n.id),style:{display:"flex",alignItems:"center",gap:6,padding:"8px 14px",borderRadius:T.radius,border:"none",fontSize:13,cursor:"pointer",fontWeight:page===n.id?700:500,transition:"all 0.15s",background:page===n.id?T.primaryLighter:"transparent",color:page===n.id?T.primary:T.textSecondary}},n.icon," ",n.label)))),
+            React.createElement("div",null,user?
+              React.createElement("div",{style:{display:"flex",alignItems:"center",gap:12}},
+                React.createElement("div",{style:{width:32,height:32,borderRadius:T.radiusFull,background:T.primaryLighter,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:700,color:T.primary}},user.email[0].toUpperCase()),
+                React.createElement("span",{style:{fontSize:13,color:T.textSecondary,fontWeight:500}},user.name),
+                React.createElement(Btn,{variant:"ghost",size:"sm",onClick:()=>setUser(null)},React.createElement(LogOut,{size:14}))):
+              React.createElement(Btn,{variant:"secondary",size:"sm",onClick:()=>nav("login")},React.createElement(LogIn,{size:14})," Sign In")))),
+        // Content
+        React.createElement("main",{style:{maxWidth:1120,margin:"0 auto",padding:"28px 24px 64px"}},
+          page==="home"&&React.createElement(HomePage,{navigate:nav}),
+          page==="browse"&&React.createElement(BrowsePage,{navigate:nav,reports}),
+          page==="peptide"&&React.createElement(PeptideDetailPage,{peptideId:param,navigate:nav,reports}),
+          page==="submit"&&React.createElement(SubmitPage,{user,navigate:nav,onSubmit}),
+          page==="analytics"&&React.createElement(AnalyticsPage,{reports}),
+          page==="login"&&React.createElement(LoginPage,{onLogin:setUser,navigate:nav})),
+        // Footer
+        React.createElement("footer",{style:{borderTop:`1px solid ${T.border}`,padding:24,background:T.surface}},
+          React.createElement("div",{style:{maxWidth:1120,margin:"0 auto",display:"flex",justifyContent:"space-between",alignItems:"center"}},
+            React.createElement("div",{style:{display:"flex",alignItems:"center",gap:8}},React.createElement(Database,{size:14,color:T.textMuted}),React.createElement("span",{style:{fontSize:12,color:T.textMuted}},"PeptideTracker -- User-reported experiences only. Not medical advice.")),
+            React.createElement("div",{style:{display:"flex",gap:20,fontSize:12}},["Terms of Service","Privacy Policy","Content Guidelines"].map(l=>React.createElement("span",{key:l,style:{color:T.textMuted,cursor:"pointer"}},l))))));
+    }
+
+    ReactDOM.render(React.createElement(App), document.getElementById("root"));
+  </script>
+</body>
+</html>
