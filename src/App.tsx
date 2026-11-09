@@ -1,6 +1,9 @@
+import Analytics from './components/Analytics'
+
 export default function App() {
   return (
     <div style={{ fontFamily: "Arial, sans-serif", padding: "40px", maxWidth: "900px", margin: "0 auto" }}>
+      <Analytics />
       <h1>Peptide Index</h1>
       <p>
         A crowdsourced database of peptide experiences, dosages, and reported effects.
