@@ -8,7 +8,7 @@ h=['<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewp
 f'<title>{e(TITLE)}</title><meta name="description" content="{e(META)}">',
 '<style>body{font-family:Georgia,system-ui,serif;max-width:720px;margin:2rem auto;padding:0 1rem;line-height:1.6;color:#222}h1{line-height:1.2}h2{margin-top:2rem}</style></head><body><article>',
 f'<h1>{e(TITLE)}</h1>',
-f'<img src="/Images/{e(FNAME)}.jpg" alt="{e(ALT)}" style="width:100%;max-width:720px;border-radius:8px;margin-bottom:1.5rem;" />',
+(f'<img src="/Images/{e(FNAME)}.jpg" alt="{e(ALT)}" style="width:100%;max-width:720px;border-radius:8px;margin-bottom:1.5rem;" />' if os.path.exists(f'{root}/public/Images/{FNAME}.jpg') else ''),
 f'<p>{e(HOOK)}</p>']
 for t,ps in SECTIONS:
     h.append(f'<h2>{e(t)}</h2>')
